@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Make My Text</title>
+  <link rel="stylesheet" href="./output-styles.css">
+</head>
+<body class="p-4 bg-gray-100 h-screen flex flex-col">
+  <!-- Header Section -->
+  <div class="bg-white shadow rounded-lg p-6 mb-10">
+    <div class="grid grid-cols-4 gap-4">
+      <!-- Clear Memory -->
+      <button id="clearMemoryBtn" class="w-full flex flex-col items-center text-gray-600 hover:text-blue-500">
+        <span class="text-2xl">🧹</span>
+        <span class="text-sm">Clear Memory</span>
+      </button>
+      <!-- Summarize -->
+      <button id="summarizeBtn" class="w-full flex flex-col items-center text-gray-600 hover:text-blue-500">
+        <span class="text-2xl">📝</span>
+        <span class="text-sm">Summarize</span>
+      </button>
+      <!-- Write Email -->
+      <button id="writeEmailBtn" class="w-full flex flex-col items-center text-gray-600 hover:text-blue-500">
+        <span class="text-2xl">📧</span>
+        <span class="text-sm">Write Email</span>
+      </button>
+      <!-- Generate Replies -->
+      <button id="generateRepliesBtn" class="w-full flex flex-col items-center text-gray-600 hover:text-blue-500">
+        <span class="text-2xl">💬</span>
+        <span class="text-sm">Generate Replies</span>
+      </button>
+    </button>
+    <!-- Options -->
+    <button id="optionsBtn" class="flex flex-col items-center text-gray-600 hover:text-blue-500">
+      <span class="text-2xl">⚙️</span>
+      <span class="text-sm">Options</span>
+    </button>
+    <!-- About Us -->
+    <button id="aboutUsBtn" class="flex flex-col items-center text-gray-600 hover:text-blue-500">
+      <span class="text-2xl">ℹ️</span>
+      <span class="text-sm">About Us</span>
+    </button>
+    </div>
+  </div>
+
+  <!-- Chat Section -->
+  <div class="bg-white shadow rounded-lg flex-grow p-4 mb-4 overflow-auto">
+    <div id="chat-section" class="space-y-4">
+      <!-- Chat Message Appear here dynamically-->
+    </div>
+  </div>
+
+  <!-- Footer Section -->
+  <div class="bg-white shadow rounded-lg flex items-center p-4">
+    <textarea
+      id="textInput"
+      class="flex-grow border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      placeholder="Type your sentence here..."
+      rows="1"
+    ></textarea>
+  </div>
+  
+    <!-- Add scripts -->
+    <script src="./utils.js" type="module"></script>
+    <script src="./dom.js" type="module"></script>
+    <script src="./ai.js" type="module"></script>
+    <script src="./main.js" type="module"></script>
+  <!-- <script src="./sidepanel.js"></script> -->
+</body>
+</html>

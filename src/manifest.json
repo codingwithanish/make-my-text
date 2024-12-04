@@ -1,0 +1,27 @@
+{
+    "manifest_version": 3,
+    "name": "Make My Text",
+    "version": "1.0",
+    "description": "A Chrome extension that help to rewrite summarize and translate",
+    "permissions": ["tabs", "scripting", "sidePanel", "storage","contextMenus", "activeTab"],
+    "host_permissions": ["<all_urls>"],
+    "content_scripts": [
+      {
+        "all_frames": true,
+        "matches": ["<all_urls>"], 
+        "js": ["content.js"]
+      }
+    ],
+    "icons": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    },
+    "side_panel": {
+      "default_path": "index.html"
+    },
+    "background": {
+    "service_worker": "service-worker.js"
+  }
+  }
+  
