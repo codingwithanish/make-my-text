@@ -5,11 +5,12 @@
     "description": "A Chrome extension that help to rewrite summarize and translate",
     "permissions": ["tabs", "scripting", "sidePanel", "storage","contextMenus", "activeTab"],
     "host_permissions": ["<all_urls>"],
+    "options_page": "options.html",
     "content_scripts": [
       {
         "all_frames": true,
         "matches": ["<all_urls>"], 
-        "js": ["content.js"]
+        "js": ["js/content.js"]
       }
     ],
     "icons": {
@@ -21,7 +22,7 @@
       "default_path": "index.html"
     },
     "background": {
-    "service_worker": "./js/service-worker.js"
+    "service_worker": "js/service-worker.js"
   }
   }
   
