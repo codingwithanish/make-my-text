@@ -146,113 +146,120 @@
 var _utilsJs = require("./utils.js");
 var _domJs = require("./dom.js");
 var _aiJs = require("./ai.js");
+// Helper function to sleep for a specified duration
+function sleep(ms) {
+    return new Promise((resolve)=>setTimeout(resolve, ms));
+}
 document.addEventListener("DOMContentLoaded", async ()=>{
     const chatSection = document.querySelector("#chat-section");
+    (0, _utilsJs.logInfo)("Extension script going to execute");
     // Fetch and populate messages on load
+    // Sleep for 5 seconds
+    await sleep(5000);
+    (0, _utilsJs.logInfo)("Extension script after 5 minutes delay");
     let userMessages = await (0, _utilsJs.fetchFromStorage)("userMessages");
+    let validation_result = await validateConfiguration(); // Ensure configuration is validated
+    if (!validation_result) return;
+    await (0, _utilsJs.checkAndAddDefaultPromptConfigurations)(); // Ensure default prompt configurations are added
     (0, _domJs.populateChatSection)(userMessages);
     // Button: Clear Memory
     const clearMemoryBtn = document.getElementById("clearMemoryBtn");
     if (clearMemoryBtn) clearMemoryBtn.addEventListener("click", async ()=>{
         chrome.storage.local.remove("userMessages", ()=>{
-            console.log("Memory cleared.");
+            (0, _utilsJs.logInfo)("Memory cleared.");
             (0, _domJs.populateChatSection)([]); // Clear UI
         });
     });
+    // Dynamically generate buttons based on prompt configurations
+    const actionButtonPanel = document.getElementById("action-button-panel");
+    const promptConfigs = await (0, _utilsJs.getPromptConfigurations)();
+    (0, _utilsJs.logInfo)("Prompt Configurations Dynamically Generated:", promptConfigs);
+    promptConfigs.forEach((config)=>{
+        const button = document.createElement("button");
+        button.id = config.id;
+        button.className = "w-full flex flex-col items-center text-gray-600 hover:text-blue-500";
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "text-2xl";
+        iconSpan.textContent = "\uD83D\uDCDD"; // You can customize the icon as needed
+        const textSpan = document.createElement("span");
+        textSpan.className = "text-sm";
+        textSpan.textContent = config.name;
+        button.appendChild(iconSpan);
+        button.appendChild(textSpan);
+        button.addEventListener("click", ()=>handleButtonClick(config.id, userMessages));
+        actionButtonPanel.appendChild(button);
+    });
     // Button: Summarize
-    const summarizeBtn = document.getElementById("summarizeBtn");
-    if (summarizeBtn) summarizeBtn.addEventListener("click", async ()=>{
-        userMessages = await (0, _utilsJs.fetchFromStorage)("userMessages");
-        const textSummary = (0, _utilsJs.concatenateMessages)(userMessages);
-        if (!textSummary) return;
-        const heading = await (0, _aiJs.generateSummary)(textSummary, "headline", length = "short");
-        const keyPoints = await (0, _aiJs.generateSummary)(textSummary, "key-points");
-        const tldr = await (0, _aiJs.generateSummary)(textSummary, "tl;dr");
-        const complete_summary = `
-            ${heading} \n\n
-            Key Points: \n
-            ${keyPoints}
-            Summary: \n 
-            ${tldr}
-            `;
-        const newMessage = {
-            content: complete_summary,
-            siteName: "Make My Text"
-        };
-        userMessages.push(newMessage);
-        await (0, _utilsJs.saveToStorage)("userMessages", userMessages);
-        (0, _domJs.populateChatSection)(userMessages);
-    });
+    // const summarizeBtn = document.getElementById("summarizeBtn");
+    // if (summarizeBtn) {
+    //     summarizeBtn.addEventListener("click", async () => {
+    //         userMessages = await fetchFromStorage("userMessages");
+    //         const textSummary = concatenateMessages(userMessages);
+    //         if (!textSummary) return;
+    //         const heading = await generateSummary(textSummary,"headline", length="short");
+    //         const keyPoints = await generateSummary(textSummary, "key-points");
+    //         const tldr = await generateSummary(textSummary, "tl;dr");
+    //         const complete_summary = `
+    //         ${heading} \n\n
+    //         Key Points: \n
+    //         ${keyPoints}
+    //         Summary: \n 
+    //         ${tldr}
+    //         `
+    //         const newMessage = { content: complete_summary, siteName: "Make My Text" };
+    //         userMessages.push(newMessage);
+    //         await saveToStorage("userMessages", userMessages);
+    //         populateChatSection(userMessages);
+    //     });
+    // }
     // Button: Write Email
-    const writeEmailBtn = document.getElementById("writeEmailBtn");
-    if (writeEmailBtn) writeEmailBtn.addEventListener("click", async ()=>{
-        userMessages = await (0, _utilsJs.fetchFromStorage)("userMessages");
-        const userContext = (0, _utilsJs.filterMessages)(userMessages, "User").map((item)=>item.content);
-        const siteContext = (0, _utilsJs.filterMessages)(userMessages, "Make My Text", true).map((item)=>item.content);
-        const prompt_template = `
-          You are a professional email creator. Based on the provided input information, your task is to craft a professional email. 
-
-            There are two types of input information:
-            1. **User Context**: Details about the user on whose behalf the email is being written.
-            2. **Site Context**: Additional context about the purpose or subject of the email.
-
-            Your response should include:
-            - **Subject**: A concise and relevant subject line.
-            - **Body**: A professionally written email body.
-
-            **Response format**:
-            - Subject: [Your Subject Line]
-            - Body: [Your Email Content]
-
-            Ensure the response contains only the subject and body, with no additional commentary or explanations.
-
-            User Context: ${userContext}
-            Site Context: ${siteContext}
-            `;
-        const rewrittenMsg = await (0, _aiJs.executePrompt)(prompt_template);
-        const newMessage = {
-            content: rewrittenMsg,
-            siteName: "Make My Text"
-        };
-        userMessages.push(newMessage);
-        await (0, _utilsJs.saveToStorage)("userMessages", userMessages);
-        (0, _domJs.populateChatSection)(userMessages);
-    });
+    // const writeEmailBtn = document.getElementById("writeEmailBtn");
+    // if (writeEmailBtn) {
+    //     writeEmailBtn.addEventListener("click", async () => {
+    //       try {
+    //         const config = await getPromptConfiguration("write-email");
+    //         const promptTemplate = config.prompt_template;
+    //         // Use the promptTemplate in your logic
+    //         const userContext = userMessages.map(item => item.content).join('\n');
+    //         const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
+    //         const prompt = promptTemplate
+    //             .replace('${userContext}', userContext)
+    //             .replace('${siteContext}', siteContext.join('\n'));
+    //             const rewrittenMsg = await executePrompt(prompt);
+    //             const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
+    //             userMessages.push(newMessage);
+    //             await saveToStorage("userMessages", userMessages);
+    //             populateChatSection(userMessages);
+    //         logInfo("Generated Email:", response);
+    //     } catch (error) {
+    //         logError("Error generating email:", error);
+    //     }
+    //     });
+    // }
     // Button: Generate Replies
-    const generateRepliesBtn = document.getElementById("generateRepliesBtn");
-    if (generateRepliesBtn) generateRepliesBtn.addEventListener("click", async ()=>{
-        userMessages = await (0, _utilsJs.fetchFromStorage)("userMessages");
-        const userContext = (0, _utilsJs.filterMessages)(userMessages, "User").map((item)=>item.content);
-        const siteContext = [
-            "When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.",
-            "I tried upgrading the Parse JS version, but it didn\u2019t work.",
-            "Is it possible to include this in this week\u2019s release?"
-        ];
-        const prompt_template = `
-            You are tasked with writing a reply based on the provided context information. The context is divided into two types:
-
-1. **User Context**: An array of strings that provides insights into the type of reply required. It includes the user message and offers guidance on what the reply should convey. Note that the reply will be made on behalf of the same user.
-2. **Site Context**: An array of strings that provides comprehensive details about the topic.
-
-Your task is create a reply which contains the user context information more elaborated way by including the site context information.
-
-**Response Requirements**:
-- Provide only the reply content in your response.
-- Avoid including any additional commentary or explanations.
-
-**Inputs**:
-- User Context: ${userContext}
-- Site Context: ${siteContext}
-            `;
-        const rewrittenMsg = await (0, _aiJs.executePrompt)(prompt_template);
-        const newMessage = {
-            content: rewrittenMsg,
-            siteName: "Make My Text"
-        };
-        userMessages.push(newMessage);
-        await (0, _utilsJs.saveToStorage)("userMessages", userMessages);
-        (0, _domJs.populateChatSection)(userMessages);
-    });
+    // const generateRepliesBtn = document.getElementById("generateRepliesBtn");
+    // if (generateRepliesBtn) {
+    //     generateRepliesBtn.addEventListener("click", async () => {
+    //       try {
+    //         const config = await getPromptConfiguration("generate-replies");
+    //         const promptTemplate = config.prompt_template;
+    //         // Use the promptTemplate in your logic
+    //         const userContext = userMessages.map(item => item.content).join('\n');
+    //         const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
+    //         const prompt = promptTemplate
+    //             .replace('${userContext}', userContext)
+    //             .replace('${siteContext}', siteContext.join('\n'));
+    //             const rewrittenMsg = await executePrompt(prompt);
+    //             const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
+    //             userMessages.push(newMessage);
+    //             await saveToStorage("userMessages", userMessages);
+    //             populateChatSection(userMessages);
+    //         logInfo("Generated Email:", response);
+    //     } catch (error) {
+    //         logError("Error generating email:", error);
+    //     }
+    //     });
+    // }
     // Listen for changes to Chrome storage
     chrome.storage.onChanged.addListener((changes, namespace)=>{
         if (changes.userSelection) //const chatSection = document.querySelector("#chat-section");
@@ -288,6 +295,7 @@ Your task is create a reply which contains the user context information more ela
             });
         }
     });
+    const textInput = document.getElementById("textInput");
     // Add an event listener to capture the Enter key press
     textInput.addEventListener('keydown', (event)=>{
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -358,19 +366,60 @@ Your task is create a reply which contains the user context information more ela
             // Add functionality to copy rewrittenMsg to clipboard
             rewrittenBox.querySelector(".copy-btn").addEventListener("click", ()=>{
                 navigator.clipboard.writeText(rewrittenMsg).then(()=>{
-                    console.log("Rewritten message copied to clipboard!");
+                    (0, _utilsJs.logInfo)("Rewritten message copied to clipboard!");
                 }).catch((error)=>{
-                    console.error("Failed to copy text:", error);
+                    (0, _utilsJs.logError)("Failed to copy text:", error);
                 });
             });
         }
     });
 });
+async function validateConfiguration() {
+    const config = await (0, _utilsJs.getApiKeys)();
+    const apiKeys = config.apikeys;
+    if (!apiKeys || !apiKeys["gemini-api-key"] || !apiKeys["text-summary-key"]) {
+        (0, _domJs.createWarningMessageDiv)("Api Keys not configured");
+        return false;
+    }
+    return true;
+}
+// Common function to handle button clicks
+async function handleButtonClick(id, userMessages) {
+    try {
+        const promptConfigs = await (0, _utilsJs.getPromptConfigurations)();
+        const config = promptConfigs.find((item)=>item.id === id);
+        if (config) {
+            (0, _utilsJs.logInfo)("Prompt Configuration:", config);
+            const promptTemplate = config.prompt_template;
+            const userContext = userMessages.map((item)=>item.content).join('\n');
+            const siteContext = [
+                "When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.",
+                "I tried upgrading the Parse JS version, but it didn\u2019t work.",
+                "Is it possible to include this in this week\u2019s release?"
+            ];
+            const prompt = promptTemplate.replace('${userContext}', userContext).replace('${siteContext}', siteContext.join('\n'));
+            (0, _utilsJs.logInfo)("Generated Prompt Message:", prompt);
+            const rewrittenMsg = await (0, _aiJs.executePrompt)(prompt);
+            const newMessage = {
+                content: rewrittenMsg,
+                siteName: "Make My Text"
+            };
+            userMessages.push(newMessage);
+            await (0, _utilsJs.saveToStorage)("userMessages", userMessages);
+            (0, _domJs.populateChatSection)(userMessages);
+        } else (0, _utilsJs.logError)(`Prompt configuration with id ${id} not found`);
+    } catch (error) {
+        (0, _utilsJs.logError)("Error retrieving prompt configuration:", error);
+    }
+}
 
 },{"./utils.js":"7ITpU","./dom.js":"cMwWB","./ai.js":"c5VPc"}],"7ITpU":[function(require,module,exports,__globalThis) {
-// Utility: Fetch data from Chrome storage
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "setLogLevel", ()=>setLogLevel);
+parcelHelpers.export(exports, "logInfo", ()=>logInfo);
+parcelHelpers.export(exports, "logError", ()=>logError);
+// Utility: Fetch data from Chrome storage
 parcelHelpers.export(exports, "fetchFromStorage", ()=>fetchFromStorage);
 // Utility: Add data to Chrome storage
 parcelHelpers.export(exports, "saveToStorage", ()=>saveToStorage);
@@ -379,6 +428,26 @@ parcelHelpers.export(exports, "filterMessages", ()=>filterMessages);
 // Utility: Concatenate message content
 parcelHelpers.export(exports, "concatenateMessages", ()=>concatenateMessages);
 parcelHelpers.export(exports, "addMessageToMemory", ()=>addMessageToMemory);
+parcelHelpers.export(exports, "getApiKeys", ()=>getApiKeys);
+parcelHelpers.export(exports, "saveApiKey", ()=>saveApiKey);
+parcelHelpers.export(exports, "getApiKey", ()=>getApiKey);
+parcelHelpers.export(exports, "savePromptConfiguration", ()=>savePromptConfiguration);
+parcelHelpers.export(exports, "getPromptConfigurations", ()=>getPromptConfigurations);
+parcelHelpers.export(exports, "getPromptConfiguration", ()=>getPromptConfiguration);
+parcelHelpers.export(exports, "deletePromptConfiguration", ()=>deletePromptConfiguration);
+parcelHelpers.export(exports, "checkAndAddDefaultPromptConfigurations", ()=>checkAndAddDefaultPromptConfigurations);
+var _loglevel = require("loglevel");
+var _loglevelDefault = parcelHelpers.interopDefault(_loglevel);
+(0, _loglevelDefault.default).setLevel('info'); // Set the default logging level
+function setLogLevel(level) {
+    (0, _loglevelDefault.default).setLevel(level);
+}
+function logInfo(message, ...optionalParams) {
+    (0, _loglevelDefault.default).info(message, ...optionalParams);
+}
+function logError(message, ...optionalParams) {
+    (0, _loglevelDefault.default).error(message, ...optionalParams);
+}
 function fetchFromStorage(key) {
     return new Promise((resolve, reject)=>{
         chrome.storage.local.get(key, (result)=>{
@@ -418,13 +487,154 @@ function addMessageToMemory(userMessageText, site, siteURL) {
         chrome.storage.local.set({
             userMessages
         }, ()=>{
-            console.log("New message appended:", newMessage);
-            console.log("Updated userMessages:", userMessages);
+            logInfo("New message appended:", newMessage);
+            logInfo("Updated userMessages:", userMessages);
         });
     });
 }
+function getApiKeys() {
+    return new Promise((resolve, reject)=>{
+        chrome.storage.sync.get("apikeys", (data)=>{
+            resolve(data);
+        });
+    });
+}
+function saveApiKey(key) {
+    return new Promise((resolve, reject)=>{
+        chrome.storage.sync.get("apikeys", (data)=>{
+            const apiKeys = data.apikeys || {};
+            Object.assign(apiKeys, key);
+            chrome.storage.sync.set({
+                apikeys: apiKeys
+            }, ()=>{
+                logInfo("API key saved:", key);
+                resolve();
+            });
+        });
+    });
+}
+function getApiKey(key) {
+    return new Promise((resolve, reject)=>{
+        chrome.storage.sync.get("apikeys", (data)=>{
+            const apiKeys = data.apikeys || {};
+            if (apiKeys.hasOwnProperty(key)) resolve(apiKeys[key]);
+            else resolve(null);
+        });
+    });
+}
+function savePromptConfiguration(config) {
+    return new Promise((resolve, reject)=>{
+        chrome.storage.sync.get("promptconfig", (data)=>{
+            const promptConfigs = data.promptconfig || [];
+            const existingIndex = promptConfigs.findIndex((item)=>item.id === config.id);
+            if (existingIndex !== -1) // Update existing configuration
+            promptConfigs[existingIndex] = config;
+            else // Add new configuration
+            promptConfigs.push(config);
+            chrome.storage.sync.set({
+                promptconfig: promptConfigs
+            }, ()=>{
+                logInfo("Prompt configuration saved:", config);
+                resolve();
+            });
+        });
+    });
+}
+function getPromptConfigurations() {
+    return new Promise((resolve, reject)=>{
+        chrome.storage.sync.get("promptconfig", (data)=>{
+            const promptConfigs = data.promptconfig || [];
+            logInfo("Prompt configurations retrieved:", promptConfigs);
+            resolve(promptConfigs);
+        });
+    });
+}
+function getPromptConfiguration(id) {
+    return new Promise((resolve, reject)=>{
+        chrome.storage.sync.get("promptconfig", (data)=>{
+            const promptConfigs = data.promptconfig || [];
+            const config = promptConfigs.find((item)=>item.id === id);
+            if (config) resolve(config);
+            else reject(`Prompt configuration with id ${id} not found`);
+        });
+    });
+}
+function deletePromptConfiguration(id) {
+    return new Promise((resolve, reject)=>{
+        chrome.storage.sync.get("promptconfig", (data)=>{
+            let promptConfigs = data.promptconfig || [];
+            const newPromptConfigs = promptConfigs.filter((item)=>item.id !== id);
+            if (newPromptConfigs.length === promptConfigs.length) {
+                reject(`Prompt configuration with id ${id} not found`);
+                return;
+            }
+            chrome.storage.sync.set({
+                promptconfig: newPromptConfigs
+            }, ()=>{
+                logInfo(`Prompt configuration with id ${id} deleted`);
+                resolve();
+            });
+        });
+    });
+}
+async function checkAndAddDefaultPromptConfigurations() {
+    const promptConfigs = await getPromptConfigurations();
+    logInfo("checkAndAddDefaultPromptConfigurations # Prompt configurations", promptConfigs);
+    if (!promptConfigs || promptConfigs.length === 0) {
+        let config_write_email = {
+            name: "Write Email",
+            id: "write-email",
+            prompt_template: `
+                  You are a professional email creator. Based on the provided input information, your task is to craft a professional email. 
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gkKU3":[function(require,module,exports,__globalThis) {
+                  There are two types of input information:
+                  1. **User Context**: Details about the user on whose behalf the email is being written.
+                  2. **Site Context**: Additional context about the purpose or subject of the email.
+
+                  Your response should include:
+                  - **Subject**: A concise and relevant subject line.
+                  - **Body**: A professionally written email body.
+
+                  **Response format**:
+                  - Subject: [Your Subject Line]
+                  - Body: [Your Email Content]
+
+                  Ensure the response contains only the subject and body, with no additional commentary or explanations.
+
+                  User Context: \${userContext}
+                  Site Context: \${siteContext}
+              `,
+            canDelete: false
+        };
+        let config_generate_replies = {
+            name: "Generate Replies",
+            id: "generate-replies",
+            prompt_template: `
+                  You are tasked with writing a reply based on the provided context information. The context is divided into two types:
+
+                  1. **User Context**: An array of strings that provides insights into the type of reply required. It includes the user message and offers guidance on what the reply should convey. Note that the reply will be made on behalf of the same user.
+                  2. **Site Context**: An array of strings that provides comprehensive details about the topic.
+
+                  Your task is create a reply which contains the user context information more elaborated way by including the site context information.
+
+                  **Response Requirements**:
+                  - Provide only the reply content in your response.
+                  - Avoid including any additional commentary or explanations.
+
+                  **Inputs**:
+                  - User Context: \${userContext}
+                  - Site Context: \${siteContext}
+              `,
+            canDelete: false
+        };
+        await chrome.storage.sync.remove("promptconfig");
+        await savePromptConfiguration(config_write_email);
+        await savePromptConfiguration(config_generate_replies);
+        logInfo("Default prompt configurations added.");
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","loglevel":"7kRFs"}],"gkKU3":[function(require,module,exports,__globalThis) {
 exports.interopDefault = function(a) {
     return a && a.__esModule ? a : {
         default: a
@@ -454,16 +664,278 @@ exports.export = function(dest, destName, get) {
     });
 };
 
+},{}],"7kRFs":[function(require,module,exports,__globalThis) {
+/*
+* loglevel - https://github.com/pimterry/loglevel
+*
+* Copyright (c) 2013 Tim Perry
+* Licensed under the MIT license.
+*/ (function(root, definition) {
+    "use strict";
+    if (typeof define === 'function' && define.amd) define(definition);
+    else if (0, module.exports) module.exports = definition();
+    else root.log = definition();
+})(this, function() {
+    "use strict";
+    // Slightly dubious tricks to cut down minimized file size
+    var noop = function() {};
+    var undefinedType = "undefined";
+    var isIE = typeof window !== undefinedType && typeof window.navigator !== undefinedType && /Trident\/|MSIE /.test(window.navigator.userAgent);
+    var logMethods = [
+        "trace",
+        "debug",
+        "info",
+        "warn",
+        "error"
+    ];
+    var _loggersByName = {};
+    var defaultLogger = null;
+    // Cross-browser bind equivalent that works at least back to IE6
+    function bindMethod(obj, methodName) {
+        var method = obj[methodName];
+        if (typeof method.bind === 'function') return method.bind(obj);
+        else try {
+            return Function.prototype.bind.call(method, obj);
+        } catch (e) {
+            // Missing bind shim or IE8 + Modernizr, fallback to wrapping
+            return function() {
+                return Function.prototype.apply.apply(method, [
+                    obj,
+                    arguments
+                ]);
+            };
+        }
+    }
+    // Trace() doesn't print the message in IE, so for that case we need to wrap it
+    function traceForIE() {
+        if (console.log) {
+            if (console.log.apply) console.log.apply(console, arguments);
+            else // In old IE, native console methods themselves don't have apply().
+            Function.prototype.apply.apply(console.log, [
+                console,
+                arguments
+            ]);
+        }
+        if (console.trace) console.trace();
+    }
+    // Build the best logging method possible for this env
+    // Wherever possible we want to bind, not wrap, to preserve stack traces
+    function realMethod(methodName) {
+        if (methodName === 'debug') methodName = 'log';
+        if (typeof console === undefinedType) return false; // No method possible, for now - fixed later by enableLoggingWhenConsoleArrives
+        else if (methodName === 'trace' && isIE) return traceForIE;
+        else if (console[methodName] !== undefined) return bindMethod(console, methodName);
+        else if (console.log !== undefined) return bindMethod(console, 'log');
+        else return noop;
+    }
+    // These private functions always need `this` to be set properly
+    function replaceLoggingMethods() {
+        /*jshint validthis:true */ var level = this.getLevel();
+        // Replace the actual methods.
+        for(var i = 0; i < logMethods.length; i++){
+            var methodName = logMethods[i];
+            this[methodName] = i < level ? noop : this.methodFactory(methodName, level, this.name);
+        }
+        // Define log.log as an alias for log.debug
+        this.log = this.debug;
+        // Return any important warnings.
+        if (typeof console === undefinedType && level < this.levels.SILENT) return "No console available for logging";
+    }
+    // In old IE versions, the console isn't present until you first open it.
+    // We build realMethod() replacements here that regenerate logging methods
+    function enableLoggingWhenConsoleArrives(methodName) {
+        return function() {
+            if (typeof console !== undefinedType) {
+                replaceLoggingMethods.call(this);
+                this[methodName].apply(this, arguments);
+            }
+        };
+    }
+    // By default, we use closely bound real methods wherever possible, and
+    // otherwise we wait for a console to appear, and then try again.
+    function defaultMethodFactory(methodName, _level, _loggerName) {
+        /*jshint validthis:true */ return realMethod(methodName) || enableLoggingWhenConsoleArrives.apply(this, arguments);
+    }
+    function Logger(name, factory) {
+        // Private instance variables.
+        var self = this;
+        /**
+       * The level inherited from a parent logger (or a global default). We
+       * cache this here rather than delegating to the parent so that it stays
+       * in sync with the actual logging methods that we have installed (the
+       * parent could change levels but we might not have rebuilt the loggers
+       * in this child yet).
+       * @type {number}
+       */ var inheritedLevel;
+        /**
+       * The default level for this logger, if any. If set, this overrides
+       * `inheritedLevel`.
+       * @type {number|null}
+       */ var defaultLevel;
+        /**
+       * A user-specific level for this logger. If set, this overrides
+       * `defaultLevel`.
+       * @type {number|null}
+       */ var userLevel;
+        var storageKey = "loglevel";
+        if (typeof name === "string") storageKey += ":" + name;
+        else if (typeof name === "symbol") storageKey = undefined;
+        function persistLevelIfPossible(levelNum) {
+            var levelName = (logMethods[levelNum] || 'silent').toUpperCase();
+            if (typeof window === undefinedType || !storageKey) return;
+            // Use localStorage if available
+            try {
+                window.localStorage[storageKey] = levelName;
+                return;
+            } catch (ignore) {}
+            // Use session cookie as fallback
+            try {
+                window.document.cookie = encodeURIComponent(storageKey) + "=" + levelName + ";";
+            } catch (ignore) {}
+        }
+        function getPersistedLevel() {
+            var storedLevel;
+            if (typeof window === undefinedType || !storageKey) return;
+            try {
+                storedLevel = window.localStorage[storageKey];
+            } catch (ignore) {}
+            // Fallback to cookies if local storage gives us nothing
+            if (typeof storedLevel === undefinedType) try {
+                var cookie = window.document.cookie;
+                var cookieName = encodeURIComponent(storageKey);
+                var location = cookie.indexOf(cookieName + "=");
+                if (location !== -1) storedLevel = /^([^;]+)/.exec(cookie.slice(location + cookieName.length + 1))[1];
+            } catch (ignore) {}
+            // If the stored level is not valid, treat it as if nothing was stored.
+            if (self.levels[storedLevel] === undefined) storedLevel = undefined;
+            return storedLevel;
+        }
+        function clearPersistedLevel() {
+            if (typeof window === undefinedType || !storageKey) return;
+            // Use localStorage if available
+            try {
+                window.localStorage.removeItem(storageKey);
+            } catch (ignore) {}
+            // Use session cookie as fallback
+            try {
+                window.document.cookie = encodeURIComponent(storageKey) + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+            } catch (ignore) {}
+        }
+        function normalizeLevel(input) {
+            var level = input;
+            if (typeof level === "string" && self.levels[level.toUpperCase()] !== undefined) level = self.levels[level.toUpperCase()];
+            if (typeof level === "number" && level >= 0 && level <= self.levels.SILENT) return level;
+            else throw new TypeError("log.setLevel() called with invalid level: " + input);
+        }
+        /*
+       *
+       * Public logger API - see https://github.com/pimterry/loglevel for details
+       *
+       */ self.name = name;
+        self.levels = {
+            "TRACE": 0,
+            "DEBUG": 1,
+            "INFO": 2,
+            "WARN": 3,
+            "ERROR": 4,
+            "SILENT": 5
+        };
+        self.methodFactory = factory || defaultMethodFactory;
+        self.getLevel = function() {
+            if (userLevel != null) return userLevel;
+            else if (defaultLevel != null) return defaultLevel;
+            else return inheritedLevel;
+        };
+        self.setLevel = function(level, persist) {
+            userLevel = normalizeLevel(level);
+            if (persist !== false) persistLevelIfPossible(userLevel);
+            // NOTE: in v2, this should call rebuild(), which updates children.
+            return replaceLoggingMethods.call(self);
+        };
+        self.setDefaultLevel = function(level) {
+            defaultLevel = normalizeLevel(level);
+            if (!getPersistedLevel()) self.setLevel(level, false);
+        };
+        self.resetLevel = function() {
+            userLevel = null;
+            clearPersistedLevel();
+            replaceLoggingMethods.call(self);
+        };
+        self.enableAll = function(persist) {
+            self.setLevel(self.levels.TRACE, persist);
+        };
+        self.disableAll = function(persist) {
+            self.setLevel(self.levels.SILENT, persist);
+        };
+        self.rebuild = function() {
+            if (defaultLogger !== self) inheritedLevel = normalizeLevel(defaultLogger.getLevel());
+            replaceLoggingMethods.call(self);
+            if (defaultLogger === self) for(var childName in _loggersByName)_loggersByName[childName].rebuild();
+        };
+        // Initialize all the internal levels.
+        inheritedLevel = normalizeLevel(defaultLogger ? defaultLogger.getLevel() : "WARN");
+        var initialLevel = getPersistedLevel();
+        if (initialLevel != null) userLevel = normalizeLevel(initialLevel);
+        replaceLoggingMethods.call(self);
+    }
+    /*
+     *
+     * Top-level API
+     *
+     */ defaultLogger = new Logger();
+    defaultLogger.getLogger = function getLogger(name) {
+        if (typeof name !== "symbol" && typeof name !== "string" || name === "") throw new TypeError("You must supply a name when creating a logger.");
+        var logger = _loggersByName[name];
+        if (!logger) logger = _loggersByName[name] = new Logger(name, defaultLogger.methodFactory);
+        return logger;
+    };
+    // Grab the current global log variable in case of overwrite
+    var _log = typeof window !== undefinedType ? window.log : undefined;
+    defaultLogger.noConflict = function() {
+        if (typeof window !== undefinedType && window.log === defaultLogger) window.log = _log;
+        return defaultLogger;
+    };
+    defaultLogger.getLoggers = function getLoggers() {
+        return _loggersByName;
+    };
+    // ES6 default export, for compatibility
+    defaultLogger['default'] = defaultLogger;
+    return defaultLogger;
+});
+
 },{}],"cMwWB":[function(require,module,exports,__globalThis) {
-// DOM: Create a new message div
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
+// DOM: Create a new warning message div
+parcelHelpers.export(exports, "createWarningMessageDiv", ()=>createWarningMessageDiv);
+// DOM: Create a new message div
 parcelHelpers.export(exports, "createNewMessageDiv", ()=>createNewMessageDiv);
 // DOM: Populate chat section with messages
 parcelHelpers.export(exports, "populateChatSection", ()=>populateChatSection);
 // DOM: Add event listener to a button
 parcelHelpers.export(exports, "attachButtonListener", ()=>attachButtonListener);
 parcelHelpers.export(exports, "addToChat", ()=>addToChat);
+var _utils = require("./utils");
+function createWarningMessageDiv(content) {
+    const warningMessageDiv = document.createElement("div");
+    warningMessageDiv.className = "p-4 bg-yellow-200 rounded-lg relative font-mono";
+    // Add close button for the warning message
+    const closeButton = document.createElement("button");
+    closeButton.className = "absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-sm";
+    closeButton.textContent = "\u2716";
+    closeButton.addEventListener("click", ()=>{
+        warningMessageDiv.remove();
+    });
+    warningMessageDiv.appendChild(closeButton);
+    // Add the main content of the warning message
+    const messageTextDiv = document.createElement("div");
+    messageTextDiv.className = "text-gray-800 mb-2 text-base text-content-div";
+    if (content) content = content.replace(/\n/g, "<br/>").trim();
+    messageTextDiv.innerHTML = content;
+    warningMessageDiv.appendChild(messageTextDiv);
+    // Append the warning message div to the body or a specific container
+    document.body.appendChild(warningMessageDiv);
+}
 function createNewMessageDiv(content, siteName, link) {
     const newMessageDiv = document.createElement("div");
     newMessageDiv.className = "p-4 bg-gray-200 rounded-lg relative font-mono";
@@ -507,7 +979,7 @@ function createNewMessageDiv(content, siteName, link) {
     // buttonContainer.appendChild(translateButton);
     const rewriteButton = document.createElement("button");
     rewriteButton.className = "rewrite-btn text-gray-600 hover:text-blue-500";
-    rewriteButton.innerHTML = "<span class='text-xl'>\u270D\uFE0F</span>";
+    rewriteButton.innerHTML = "<span class='text-xl'>[Rewrite]</span>";
     buttonContainer.appendChild(rewriteButton);
     resourceDiv.appendChild(buttonContainer);
     newMessageDiv.appendChild(resourceDiv);
@@ -516,7 +988,7 @@ function createNewMessageDiv(content, siteName, link) {
 function populateChatSection(messages) {
     const chatSection = document.querySelector("#chat-section");
     if (!chatSection) {
-        console.error("Chat section not found!");
+        (0, _utils.logError)("Chat section not found!");
         return;
     }
     chatSection.innerHTML = ""; // Clear existing messages
@@ -530,14 +1002,14 @@ function populateChatSection(messages) {
 function attachButtonListener(buttonId, callback) {
     const button = document.getElementById(buttonId);
     if (!button) {
-        console.error(`Button with ID "${buttonId}" not found!`);
+        (0, _utils.logError)(`Button with ID "${buttonId}" not found!`);
         return;
     }
     button.addEventListener("click", callback);
 }
 function addToChat() {}
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"c5VPc":[function(require,module,exports,__globalThis) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./utils":"7ITpU"}],"c5VPc":[function(require,module,exports,__globalThis) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "initModel", ()=>initModel);
@@ -545,11 +1017,15 @@ parcelHelpers.export(exports, "runPrompt", ()=>runPrompt);
 parcelHelpers.export(exports, "executePrompt", ()=>executePrompt);
 parcelHelpers.export(exports, "generateSummary", ()=>generateSummary);
 var _generativeAi = require("@google/generative-ai");
+var _utils = require("./utils");
 const MAX_MODEL_CHARS = 4000;
-let genAI = null;
+/**
+ * A variable to hold the instance of the AI generator.
+ * @type {Object|null}
+ */ let genAI = null;
 let model = null;
-const apiKey = 'AIzaSyCSS2sSqYfCIAK8sL9O5MXA6GI3eWf_D9o';
-function initModel(generationConfig) {
+async function initModel(generationConfig) {
+    const apiKey = await (0, _utils.getApiKey)("gemini-api-key");
     const safetySettings = [
         {
             category: (0, _generativeAi.HarmCategory).HARM_CATEGORY_DANGEROUS_CONTENT,
@@ -578,7 +1054,7 @@ async function executePrompt(prompt) {
         const generationConfig = {
             temperature: "1"
         };
-        initModel(generationConfig);
+        await initModel(generationConfig);
         const response = await runPrompt(prompt, generationConfig);
         return response;
     } catch (e) {
@@ -598,7 +1074,7 @@ async function generateSummary(text, type, length = "medium") {
     return summary;
 }
 
-},{"@google/generative-ai":"gKJrW","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gKJrW":[function(require,module,exports,__globalThis) {
+},{"@google/generative-ai":"gKJrW","./utils":"7ITpU","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gKJrW":[function(require,module,exports,__globalThis) {
 /**
  * Contains the list of OpenAPI data types
  * as defined by https://swagger.io/docs/specification/data-models/data-types/

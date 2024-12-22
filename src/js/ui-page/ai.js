@@ -4,12 +4,17 @@ import {
   HarmCategory
 } from '@google/generative-ai';
 
+import { getApiKey } from './utils';
 const MAX_MODEL_CHARS = 4000;
 
+/**
+ * A variable to hold the instance of the AI generator.
+ * @type {Object|null}
+ */
 let genAI = null;
 let model = null;
-const apiKey = 'AIzaSyCSS2sSqYfCIAK8sL9O5MXA6GI3eWf_D9o'
-export function initModel(generationConfig) {
+export async function initModel(generationConfig) {
+  const apiKey = await getApiKey("gemini-api-key");
   const safetySettings = [
     {
       category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
@@ -40,7 +45,7 @@ export async function executePrompt(prompt) {
         const generationConfig = {
           temperature: "1"
         };
-        initModel(generationConfig);
+        await initModel(generationConfig);
         const response = await runPrompt(prompt, generationConfig);
         return response
         

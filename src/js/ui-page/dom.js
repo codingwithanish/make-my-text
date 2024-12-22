@@ -1,5 +1,32 @@
+import { logError, logInfo } from "./utils";
 
+// DOM: Create a new warning message div
+export function createWarningMessageDiv(content) {
+  const warningMessageDiv = document.createElement("div");
+  warningMessageDiv.className = "p-4 bg-yellow-200 rounded-lg relative font-mono";
 
+  // Add close button for the warning message
+  const closeButton = document.createElement("button");
+  closeButton.className =
+    "absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-sm";
+  closeButton.textContent = "✖";
+  closeButton.addEventListener("click", () => {
+    warningMessageDiv.remove();
+  });
+  warningMessageDiv.appendChild(closeButton);
+
+  // Add the main content of the warning message
+  const messageTextDiv = document.createElement("div");
+  messageTextDiv.className = "text-gray-800 mb-2 text-base text-content-div";
+  if (content) {
+    content = content.replace(/\n/g, "<br/>").trim();
+  }
+  messageTextDiv.innerHTML = content;
+  warningMessageDiv.appendChild(messageTextDiv);
+
+  // Append the warning message div to the body or a specific container
+  document.body.appendChild(warningMessageDiv);
+}
 
 // DOM: Create a new message div
 export function createNewMessageDiv(content, siteName, link) {
@@ -56,7 +83,7 @@ export function createNewMessageDiv(content, siteName, link) {
   
     const rewriteButton = document.createElement("button");
     rewriteButton.className = "rewrite-btn text-gray-600 hover:text-blue-500";
-    rewriteButton.innerHTML = "<span class='text-xl'>✍️</span>";
+    rewriteButton.innerHTML = "<span class='text-xl'>[Rewrite]</span>";
     buttonContainer.appendChild(rewriteButton);
   
     resourceDiv.appendChild(buttonContainer);
@@ -69,7 +96,7 @@ export function createNewMessageDiv(content, siteName, link) {
   export function populateChatSection(messages) {
     const chatSection = document.querySelector("#chat-section");
     if (!chatSection) {
-      console.error("Chat section not found!");
+      logError("Chat section not found!");
       return;
     }
   
@@ -87,7 +114,7 @@ export function createNewMessageDiv(content, siteName, link) {
   export function attachButtonListener(buttonId, callback) {
     const button = document.getElementById(buttonId);
     if (!button) {
-      console.error(`Button with ID "${buttonId}" not found!`);
+      logError(`Button with ID "${buttonId}" not found!`);
       return;
     }
   

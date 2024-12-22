@@ -4,122 +4,154 @@ import {
     filterMessages,
     concatenateMessages,
     addMessageToMemory,
+    getApiKeys,
+    checkAndAddDefaultPromptConfigurations,
+    getPromptConfigurations,
+    logInfo,
+    logError
 } from "./utils.js";
-import { createNewMessageDiv, populateChatSection } from "./dom.js";
+import { createNewMessageDiv, populateChatSection, createWarningMessageDiv } from "./dom.js";
 import { generateSummary, executePrompt } from "./ai.js";
-
+// Helper function to sleep for a specified duration
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 document.addEventListener("DOMContentLoaded", async () => {
     const chatSection = document.querySelector("#chat-section");
+    logInfo("Extension script going to execute")
     // Fetch and populate messages on load
+    // Sleep for 5 seconds
+    await sleep(5000);
+    logInfo("Extension script after 5 minutes delay")
     let userMessages = await fetchFromStorage("userMessages");
+    let validation_result = await validateConfiguration(); // Ensure configuration is validated
+    if (!validation_result) return;
+    await checkAndAddDefaultPromptConfigurations(); // Ensure default prompt configurations are added
     populateChatSection(userMessages);
+
 
     // Button: Clear Memory
     const clearMemoryBtn = document.getElementById("clearMemoryBtn");
     if (clearMemoryBtn) {
         clearMemoryBtn.addEventListener("click", async () => {
             chrome.storage.local.remove("userMessages", () => {
-                console.log("Memory cleared.");
+                logInfo("Memory cleared.");
                 populateChatSection([]); // Clear UI
             });
         });
     }
 
+    // Dynamically generate buttons based on prompt configurations
+    const actionButtonPanel = document.getElementById("action-button-panel");
+    const promptConfigs = await getPromptConfigurations();
+    logInfo("Prompt Configurations Dynamically Generated:", promptConfigs);
+    promptConfigs.forEach(config => {
+        const button = document.createElement("button");
+        button.id = config.id;
+        button.className = "w-full flex flex-col items-center text-gray-600 hover:text-blue-500";
+
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "text-2xl";
+        iconSpan.textContent = "📝"; // You can customize the icon as needed
+
+        const textSpan = document.createElement("span");
+        textSpan.className = "text-sm";
+        textSpan.textContent = config.name;
+
+        button.appendChild(iconSpan);
+        button.appendChild(textSpan);
+
+        button.addEventListener("click", () => handleButtonClick(config.id, userMessages));
+        actionButtonPanel.appendChild(button);
+    });
+
     // Button: Summarize
-    const summarizeBtn = document.getElementById("summarizeBtn");
-    if (summarizeBtn) {
-        summarizeBtn.addEventListener("click", async () => {
-            userMessages = await fetchFromStorage("userMessages");
-            const textSummary = concatenateMessages(userMessages);
-            if (!textSummary) return;
-            const heading = await generateSummary(textSummary,"headline", length="short");
+    // const summarizeBtn = document.getElementById("summarizeBtn");
+    // if (summarizeBtn) {
+    //     summarizeBtn.addEventListener("click", async () => {
+    //         userMessages = await fetchFromStorage("userMessages");
+    //         const textSummary = concatenateMessages(userMessages);
+    //         if (!textSummary) return;
+    //         const heading = await generateSummary(textSummary,"headline", length="short");
 
-            const keyPoints = await generateSummary(textSummary, "key-points");
-            const tldr = await generateSummary(textSummary, "tl;dr");
+    //         const keyPoints = await generateSummary(textSummary, "key-points");
+    //         const tldr = await generateSummary(textSummary, "tl;dr");
 
-            const complete_summary = `
-            ${heading} \n\n
-            Key Points: \n
-            ${keyPoints}
-            Summary: \n 
-            ${tldr}
-            `
-            const newMessage = { content: complete_summary, siteName: "Make My Text" };
+    //         const complete_summary = `
+    //         ${heading} \n\n
+    //         Key Points: \n
+    //         ${keyPoints}
+    //         Summary: \n 
+    //         ${tldr}
+    //         `
+    //         const newMessage = { content: complete_summary, siteName: "Make My Text" };
 
-            userMessages.push(newMessage);
-            await saveToStorage("userMessages", userMessages);
-            populateChatSection(userMessages);
-        });
-    }
+    //         userMessages.push(newMessage);
+    //         await saveToStorage("userMessages", userMessages);
+    //         populateChatSection(userMessages);
+    //     });
+    // }
 
     // Button: Write Email
-    const writeEmailBtn = document.getElementById("writeEmailBtn");
-    if (writeEmailBtn) {
-        writeEmailBtn.addEventListener("click", async () => {
-            userMessages = await fetchFromStorage("userMessages");
-            const userContext = filterMessages(userMessages, "User").map(item => item.content);
-            const siteContext = filterMessages(userMessages, "Make My Text", true).map(item => item.content);
-          const prompt_template = `
-          You are a professional email creator. Based on the provided input information, your task is to craft a professional email. 
+    // const writeEmailBtn = document.getElementById("writeEmailBtn");
+    // if (writeEmailBtn) {
+    //     writeEmailBtn.addEventListener("click", async () => {
+    //       try {
+    //         const config = await getPromptConfiguration("write-email");
+    //         const promptTemplate = config.prompt_template;
 
-            There are two types of input information:
-            1. **User Context**: Details about the user on whose behalf the email is being written.
-            2. **Site Context**: Additional context about the purpose or subject of the email.
+    //         // Use the promptTemplate in your logic
+    //         const userContext = userMessages.map(item => item.content).join('\n');
+    //         const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
+            
+    //         const prompt = promptTemplate
+    //             .replace('${userContext}', userContext)
+    //             .replace('${siteContext}', siteContext.join('\n'));
 
-            Your response should include:
-            - **Subject**: A concise and relevant subject line.
-            - **Body**: A professionally written email body.
-
-            **Response format**:
-            - Subject: [Your Subject Line]
-            - Body: [Your Email Content]
-
-            Ensure the response contains only the subject and body, with no additional commentary or explanations.
-
-            User Context: ${userContext}
-            Site Context: ${siteContext}
-            `
-          const rewrittenMsg = await executePrompt(prompt_template);
+    //             const rewrittenMsg = await executePrompt(prompt);
 
 
-            const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
-            userMessages.push(newMessage);
-            await saveToStorage("userMessages", userMessages);
-            populateChatSection(userMessages);
-        });
-    }
+    //             const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
+    //             userMessages.push(newMessage);
+    //             await saveToStorage("userMessages", userMessages);
+    //             populateChatSection(userMessages);
+    //         logInfo("Generated Email:", response);
+    //     } catch (error) {
+    //         logError("Error generating email:", error);
+    //     }
+            
+    //     });
+    // }
 
     // Button: Generate Replies
-    const generateRepliesBtn = document.getElementById("generateRepliesBtn");
-    if (generateRepliesBtn) {
-        generateRepliesBtn.addEventListener("click", async () => {
-            userMessages = await fetchFromStorage("userMessages");
-            const userContext = filterMessages(userMessages, "User").map(item => item.content);
-            const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
-            const prompt_template = `
-            You are tasked with writing a reply based on the provided context information. The context is divided into two types:
+    // const generateRepliesBtn = document.getElementById("generateRepliesBtn");
+    // if (generateRepliesBtn) {
+    //     generateRepliesBtn.addEventListener("click", async () => {
+    //       try {
+    //         const config = await getPromptConfiguration("generate-replies");
+    //         const promptTemplate = config.prompt_template;
 
-1. **User Context**: An array of strings that provides insights into the type of reply required. It includes the user message and offers guidance on what the reply should convey. Note that the reply will be made on behalf of the same user.
-2. **Site Context**: An array of strings that provides comprehensive details about the topic.
+    //         // Use the promptTemplate in your logic
+    //         const userContext = userMessages.map(item => item.content).join('\n');
+    //         const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
+            
+    //         const prompt = promptTemplate
+    //             .replace('${userContext}', userContext)
+    //             .replace('${siteContext}', siteContext.join('\n'));
 
-Your task is create a reply which contains the user context information more elaborated way by including the site context information.
+    //             const rewrittenMsg = await executePrompt(prompt);
 
-**Response Requirements**:
-- Provide only the reply content in your response.
-- Avoid including any additional commentary or explanations.
 
-**Inputs**:
-- User Context: ${userContext}
-- Site Context: ${siteContext}
-            `
-            const rewrittenMsg = await executePrompt(prompt_template);
-
-            const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
-            userMessages.push(newMessage);
-            await saveToStorage("userMessages", userMessages);
-            populateChatSection(userMessages);
-        });
-    }
+    //             const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
+    //             userMessages.push(newMessage);
+    //             await saveToStorage("userMessages", userMessages);
+    //             populateChatSection(userMessages);
+    //         logInfo("Generated Email:", response);
+    //     } catch (error) {
+    //         logError("Error generating email:", error);
+    //     }
+    //     });
+    // }
 
     // Listen for changes to Chrome storage
     chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -161,7 +193,7 @@ Your task is create a reply which contains the user context information more ela
           sendResponse({ success: true });
       }
   });
-
+  const textInput = document.getElementById("textInput");
     // Add an event listener to capture the Enter key press
   textInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.shiftKey) { // Check if Enter is pressed without Shift
@@ -247,11 +279,52 @@ Your task is create a reply which contains the user context information more ela
     // Add functionality to copy rewrittenMsg to clipboard
     rewrittenBox.querySelector(".copy-btn").addEventListener("click", () => {
       navigator.clipboard.writeText(rewrittenMsg).then(() => {
-        console.log("Rewritten message copied to clipboard!");
+        logInfo("Rewritten message copied to clipboard!");
       }).catch((error) => {
-        console.error("Failed to copy text:", error);
+        logError("Failed to copy text:", error);
       });
     });
   }
   });
+
+  
 });
+async function validateConfiguration() {
+  const config = await getApiKeys();
+  const apiKeys = config.apikeys;
+
+  if (!apiKeys || !apiKeys["gemini-api-key"] || !apiKeys["text-summary-key"]) {
+      createWarningMessageDiv("Api Keys not configured");
+      return false;
+  }
+  return true;
+}
+
+// Common function to handle button clicks
+async function handleButtonClick(id, userMessages) {
+  try {
+      const promptConfigs = await getPromptConfigurations();
+      const config = promptConfigs.find(item => item.id === id);
+      if (config) {
+          logInfo("Prompt Configuration:", config);
+          const promptTemplate = config.prompt_template;
+          const userContext = userMessages.map(item => item.content).join('\n');
+          const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
+          const prompt = promptTemplate
+                .replace('${userContext}', userContext)
+                .replace('${siteContext}', siteContext.join('\n'));
+
+                logInfo("Generated Prompt Message:", prompt);
+                const rewrittenMsg = await executePrompt(prompt);
+          
+          const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
+          userMessages.push(newMessage);
+          await saveToStorage("userMessages", userMessages);
+          populateChatSection(userMessages);
+      } else {
+          logError(`Prompt configuration with id ${id} not found`);
+      }
+  } catch (error) {
+      logError("Error retrieving prompt configuration:", error);
+  }
+}
