@@ -5,6 +5,8 @@ chrome.sidePanel
 let windowId;
 chrome.tabs.onActivated.addListener(function (activeInfo) {
   windowId = activeInfo.windowId;
+    console.log("chrome tab activated");
+    updateSiteContent(activeInfo.tabId);
 });
 
 // to receive messages from popup script
@@ -71,4 +73,21 @@ chrome.runtime.onInstalled.addListener(() => {
     }
   });
 
-  
+
+  chrome.tabs.onUpdated.addListener(async (tabId) => {
+    console.log("chrome tab activated");
+    updateSiteContent(tabId);
+  });
+
+  async function updateSiteContent(tabId) {
+    const tab = await chrome.tabs.get(tabId);
+    if (!tab.url.startsWith('http')) {
+      return;
+    }
+    const injection = await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['js/extract-content.js']
+    });
+    console.log("injection:", injection);
+    chrome.storage.session.set({ pageContent: injection[0].result });
+  }

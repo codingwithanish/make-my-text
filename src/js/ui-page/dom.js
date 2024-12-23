@@ -3,7 +3,7 @@ import { logError, logInfo } from "./utils";
 // DOM: Create a new warning message div
 export function createWarningMessageDiv(content) {
   const warningMessageDiv = document.createElement("div");
-  warningMessageDiv.className = "p-4 bg-yellow-200 rounded-lg relative font-mono";
+  warningMessageDiv.className = "p-4 bg-yellow-200 rounded-lg relative";
 
   // Add close button for the warning message
   const closeButton = document.createElement("button");
@@ -31,7 +31,7 @@ export function createWarningMessageDiv(content) {
 // DOM: Create a new message div
 export function createNewMessageDiv(content, siteName, link) {
     const newMessageDiv = document.createElement("div");
-    newMessageDiv.className = "p-4 bg-gray-200 rounded-lg relative font-mono";
+    newMessageDiv.className = "p-4 bg-gray-200 rounded-lg relative";
   
     // Add close button for the parent message
     const closeButton = document.createElement("button");
@@ -46,10 +46,6 @@ export function createNewMessageDiv(content, siteName, link) {
     // Add the main content of the message
     const messageTextDiv = document.createElement("div");
     messageTextDiv.className = "text-gray-800 mb-2 text-base text-content-div";
-    // const cleanedContent = content.replace(/\t/g, " ").trim();
-    // const parsedContent = marked.parse(cleanedContent);
-    // // Sanitize the parsed content
-    // const sanitizedContent = DOMPurify.sanitize(parsedContent);
     if (content){
       content =  content.replace(/\n/g, "<br/>").trim()
     }
@@ -75,15 +71,9 @@ export function createNewMessageDiv(content, siteName, link) {
     // Add Translate and Rewrite buttons
     const buttonContainer = document.createElement("span");
     buttonContainer.className = "ml-auto flex items-center space-x-2";
-  
-        // const translateButton = document.createElement("button");
-        // translateButton.className = "translate-btn text-gray-600 hover:text-blue-500";
-        // translateButton.innerHTML = "<span class='text-xl'>🌐</span>";
-        // buttonContainer.appendChild(translateButton);
-  
     const rewriteButton = document.createElement("button");
     rewriteButton.className = "rewrite-btn text-gray-600 hover:text-blue-500";
-    rewriteButton.innerHTML = "<span class='text-xl'>[Rewrite]</span>";
+    rewriteButton.innerHTML = "<span class='text-xl'><icon class='fas fa-retweet'></icon></span>";
     buttonContainer.appendChild(rewriteButton);
   
     resourceDiv.appendChild(buttonContainer);
@@ -92,6 +82,18 @@ export function createNewMessageDiv(content, siteName, link) {
     return newMessageDiv;
   }
   
+  // DOM: Create a loading message div
+export function createLoadingMessageDiv() {
+  const loadingMessageDiv = document.createElement("div");
+  loadingMessageDiv.className = "p-4 bg-gray-200 rounded-lg relative";
+  loadingMessageDiv.textContent = "Working on it...";
+  return loadingMessageDiv;
+}
+
+// DOM: Remove a loading message div
+export function removeLoadingMessageDiv(loadingMessageDiv) {
+  loadingMessageDiv.remove();
+}
   // DOM: Populate chat section with messages
   export function populateChatSection(messages) {
     const chatSection = document.querySelector("#chat-section");

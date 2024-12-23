@@ -10,7 +10,7 @@ import {
     logInfo,
     logError
 } from "./utils.js";
-import { createNewMessageDiv, populateChatSection, createWarningMessageDiv } from "./dom.js";
+import { createNewMessageDiv, populateChatSection, createWarningMessageDiv,createLoadingMessageDiv,removeLoadingMessageDiv } from "./dom.js";
 import { generateSummary, executePrompt } from "./ai.js";
 // Helper function to sleep for a specified duration
 function sleep(ms) {
@@ -45,14 +45,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     const actionButtonPanel = document.getElementById("action-button-panel");
     const promptConfigs = await getPromptConfigurations();
     logInfo("Prompt Configurations Dynamically Generated:", promptConfigs);
+     // Mapping of id to icon classes
+     const iconClassMapping = {
+      "write-email": "fas fa-envelope",
+      "generate-replies": "fas fa-reply",
+      "general-text-formatting": "fas fa-text-height"
+  };
+
     promptConfigs.forEach(config => {
         const button = document.createElement("button");
         button.id = config.id;
-        button.className = "w-full flex flex-col items-center text-gray-600 hover:text-blue-500";
+        button.className = "w-full flex flex-col items-center text-white hover:text-white";
 
         const iconSpan = document.createElement("span");
         iconSpan.className = "text-2xl";
-        iconSpan.textContent = "📝"; // You can customize the icon as needed
+        const icon = document.createElement("i");
+        icon.className = iconClassMapping[config.id] || "fas fa-circle-play"; // Default icon if id not found
+        iconSpan.appendChild(icon);
 
         const textSpan = document.createElement("span");
         textSpan.className = "text-sm";
@@ -64,95 +73,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         button.addEventListener("click", () => handleButtonClick(config.id, userMessages));
         actionButtonPanel.appendChild(button);
     });
-
-    // Button: Summarize
-    // const summarizeBtn = document.getElementById("summarizeBtn");
-    // if (summarizeBtn) {
-    //     summarizeBtn.addEventListener("click", async () => {
-    //         userMessages = await fetchFromStorage("userMessages");
-    //         const textSummary = concatenateMessages(userMessages);
-    //         if (!textSummary) return;
-    //         const heading = await generateSummary(textSummary,"headline", length="short");
-
-    //         const keyPoints = await generateSummary(textSummary, "key-points");
-    //         const tldr = await generateSummary(textSummary, "tl;dr");
-
-    //         const complete_summary = `
-    //         ${heading} \n\n
-    //         Key Points: \n
-    //         ${keyPoints}
-    //         Summary: \n 
-    //         ${tldr}
-    //         `
-    //         const newMessage = { content: complete_summary, siteName: "Make My Text" };
-
-    //         userMessages.push(newMessage);
-    //         await saveToStorage("userMessages", userMessages);
-    //         populateChatSection(userMessages);
-    //     });
-    // }
-
-    // Button: Write Email
-    // const writeEmailBtn = document.getElementById("writeEmailBtn");
-    // if (writeEmailBtn) {
-    //     writeEmailBtn.addEventListener("click", async () => {
-    //       try {
-    //         const config = await getPromptConfiguration("write-email");
-    //         const promptTemplate = config.prompt_template;
-
-    //         // Use the promptTemplate in your logic
-    //         const userContext = userMessages.map(item => item.content).join('\n');
-    //         const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
-            
-    //         const prompt = promptTemplate
-    //             .replace('${userContext}', userContext)
-    //             .replace('${siteContext}', siteContext.join('\n'));
-
-    //             const rewrittenMsg = await executePrompt(prompt);
-
-
-    //             const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
-    //             userMessages.push(newMessage);
-    //             await saveToStorage("userMessages", userMessages);
-    //             populateChatSection(userMessages);
-    //         logInfo("Generated Email:", response);
-    //     } catch (error) {
-    //         logError("Error generating email:", error);
-    //     }
-            
-    //     });
-    // }
-
-    // Button: Generate Replies
-    // const generateRepliesBtn = document.getElementById("generateRepliesBtn");
-    // if (generateRepliesBtn) {
-    //     generateRepliesBtn.addEventListener("click", async () => {
-    //       try {
-    //         const config = await getPromptConfiguration("generate-replies");
-    //         const promptTemplate = config.prompt_template;
-
-    //         // Use the promptTemplate in your logic
-    //         const userContext = userMessages.map(item => item.content).join('\n');
-    //         const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
-            
-    //         const prompt = promptTemplate
-    //             .replace('${userContext}', userContext)
-    //             .replace('${siteContext}', siteContext.join('\n'));
-
-    //             const rewrittenMsg = await executePrompt(prompt);
-
-
-    //             const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
-    //             userMessages.push(newMessage);
-    //             await saveToStorage("userMessages", userMessages);
-    //             populateChatSection(userMessages);
-    //         logInfo("Generated Email:", response);
-    //     } catch (error) {
-    //         logError("Error generating email:", error);
-    //     }
-    //     });
-    // }
-
     // Listen for changes to Chrome storage
     chrome.storage.onChanged.addListener((changes, namespace) => {
         if (changes.userSelection) {
@@ -302,6 +222,9 @@ async function validateConfiguration() {
 
 // Common function to handle button clicks
 async function handleButtonClick(id, userMessages) {
+  const chatSection = document.getElementById("chat-section");
+  const loadingMessageDiv = createLoadingMessageDiv();
+  chatSection.appendChild(loadingMessageDiv);
   try {
       const promptConfigs = await getPromptConfigurations();
       const config = promptConfigs.find(item => item.id === id);
@@ -326,5 +249,7 @@ async function handleButtonClick(id, userMessages) {
       }
   } catch (error) {
       logError("Error retrieving prompt configuration:", error);
-  }
+  } finally {
+    removeLoadingMessageDiv(loadingMessageDiv);
+}
 }

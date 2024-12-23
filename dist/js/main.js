@@ -174,13 +174,21 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     const actionButtonPanel = document.getElementById("action-button-panel");
     const promptConfigs = await (0, _utilsJs.getPromptConfigurations)();
     (0, _utilsJs.logInfo)("Prompt Configurations Dynamically Generated:", promptConfigs);
+    // Mapping of id to icon classes
+    const iconClassMapping = {
+        "write-email": "fas fa-envelope",
+        "generate-replies": "fas fa-reply",
+        "general-text-formatting": "fas fa-text-height"
+    };
     promptConfigs.forEach((config)=>{
         const button = document.createElement("button");
         button.id = config.id;
-        button.className = "w-full flex flex-col items-center text-gray-600 hover:text-blue-500";
+        button.className = "w-full flex flex-col items-center text-white hover:text-white";
         const iconSpan = document.createElement("span");
         iconSpan.className = "text-2xl";
-        iconSpan.textContent = "\uD83D\uDCDD"; // You can customize the icon as needed
+        const icon = document.createElement("i");
+        icon.className = iconClassMapping[config.id] || "fas fa-circle-play"; // Default icon if id not found
+        iconSpan.appendChild(icon);
         const textSpan = document.createElement("span");
         textSpan.className = "text-sm";
         textSpan.textContent = config.name;
@@ -189,77 +197,6 @@ document.addEventListener("DOMContentLoaded", async ()=>{
         button.addEventListener("click", ()=>handleButtonClick(config.id, userMessages));
         actionButtonPanel.appendChild(button);
     });
-    // Button: Summarize
-    // const summarizeBtn = document.getElementById("summarizeBtn");
-    // if (summarizeBtn) {
-    //     summarizeBtn.addEventListener("click", async () => {
-    //         userMessages = await fetchFromStorage("userMessages");
-    //         const textSummary = concatenateMessages(userMessages);
-    //         if (!textSummary) return;
-    //         const heading = await generateSummary(textSummary,"headline", length="short");
-    //         const keyPoints = await generateSummary(textSummary, "key-points");
-    //         const tldr = await generateSummary(textSummary, "tl;dr");
-    //         const complete_summary = `
-    //         ${heading} \n\n
-    //         Key Points: \n
-    //         ${keyPoints}
-    //         Summary: \n 
-    //         ${tldr}
-    //         `
-    //         const newMessage = { content: complete_summary, siteName: "Make My Text" };
-    //         userMessages.push(newMessage);
-    //         await saveToStorage("userMessages", userMessages);
-    //         populateChatSection(userMessages);
-    //     });
-    // }
-    // Button: Write Email
-    // const writeEmailBtn = document.getElementById("writeEmailBtn");
-    // if (writeEmailBtn) {
-    //     writeEmailBtn.addEventListener("click", async () => {
-    //       try {
-    //         const config = await getPromptConfiguration("write-email");
-    //         const promptTemplate = config.prompt_template;
-    //         // Use the promptTemplate in your logic
-    //         const userContext = userMessages.map(item => item.content).join('\n');
-    //         const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
-    //         const prompt = promptTemplate
-    //             .replace('${userContext}', userContext)
-    //             .replace('${siteContext}', siteContext.join('\n'));
-    //             const rewrittenMsg = await executePrompt(prompt);
-    //             const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
-    //             userMessages.push(newMessage);
-    //             await saveToStorage("userMessages", userMessages);
-    //             populateChatSection(userMessages);
-    //         logInfo("Generated Email:", response);
-    //     } catch (error) {
-    //         logError("Error generating email:", error);
-    //     }
-    //     });
-    // }
-    // Button: Generate Replies
-    // const generateRepliesBtn = document.getElementById("generateRepliesBtn");
-    // if (generateRepliesBtn) {
-    //     generateRepliesBtn.addEventListener("click", async () => {
-    //       try {
-    //         const config = await getPromptConfiguration("generate-replies");
-    //         const promptTemplate = config.prompt_template;
-    //         // Use the promptTemplate in your logic
-    //         const userContext = userMessages.map(item => item.content).join('\n');
-    //         const siteContext = ["When attempting to execute the npm run build command, the build process fails due to a JavaScript parsing error. Additionally, the generated dist folder does not include the required node_modules, which is critical for the proper functioning of the application. As a workaround, the user is manually copying the node_modules directory to the dist folder to ensure the extension works as expected. This issue is causing disruptions in the build and deployment process, requiring immediate resolution.", "I tried upgrading the Parse JS version, but it didn’t work.", "Is it possible to include this in this week’s release?"];
-    //         const prompt = promptTemplate
-    //             .replace('${userContext}', userContext)
-    //             .replace('${siteContext}', siteContext.join('\n'));
-    //             const rewrittenMsg = await executePrompt(prompt);
-    //             const newMessage = { content: rewrittenMsg, siteName: "Make My Text" };
-    //             userMessages.push(newMessage);
-    //             await saveToStorage("userMessages", userMessages);
-    //             populateChatSection(userMessages);
-    //         logInfo("Generated Email:", response);
-    //     } catch (error) {
-    //         logError("Error generating email:", error);
-    //     }
-    //     });
-    // }
     // Listen for changes to Chrome storage
     chrome.storage.onChanged.addListener((changes, namespace)=>{
         if (changes.userSelection) //const chatSection = document.querySelector("#chat-section");
@@ -385,6 +322,9 @@ async function validateConfiguration() {
 }
 // Common function to handle button clicks
 async function handleButtonClick(id, userMessages) {
+    const chatSection = document.getElementById("chat-section");
+    const loadingMessageDiv = (0, _domJs.createLoadingMessageDiv)();
+    chatSection.appendChild(loadingMessageDiv);
     try {
         const promptConfigs = await (0, _utilsJs.getPromptConfigurations)();
         const config = promptConfigs.find((item)=>item.id === id);
@@ -410,6 +350,8 @@ async function handleButtonClick(id, userMessages) {
         } else (0, _utilsJs.logError)(`Prompt configuration with id ${id} not found`);
     } catch (error) {
         (0, _utilsJs.logError)("Error retrieving prompt configuration:", error);
+    } finally{
+        (0, _domJs.removeLoadingMessageDiv)(loadingMessageDiv);
     }
 }
 
@@ -910,6 +852,10 @@ parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "createWarningMessageDiv", ()=>createWarningMessageDiv);
 // DOM: Create a new message div
 parcelHelpers.export(exports, "createNewMessageDiv", ()=>createNewMessageDiv);
+// DOM: Create a loading message div
+parcelHelpers.export(exports, "createLoadingMessageDiv", ()=>createLoadingMessageDiv);
+// DOM: Remove a loading message div
+parcelHelpers.export(exports, "removeLoadingMessageDiv", ()=>removeLoadingMessageDiv);
 // DOM: Populate chat section with messages
 parcelHelpers.export(exports, "populateChatSection", ()=>populateChatSection);
 // DOM: Add event listener to a button
@@ -918,7 +864,7 @@ parcelHelpers.export(exports, "addToChat", ()=>addToChat);
 var _utils = require("./utils");
 function createWarningMessageDiv(content) {
     const warningMessageDiv = document.createElement("div");
-    warningMessageDiv.className = "p-4 bg-yellow-200 rounded-lg relative font-mono";
+    warningMessageDiv.className = "p-4 bg-yellow-200 rounded-lg relative";
     // Add close button for the warning message
     const closeButton = document.createElement("button");
     closeButton.className = "absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-sm";
@@ -938,7 +884,7 @@ function createWarningMessageDiv(content) {
 }
 function createNewMessageDiv(content, siteName, link) {
     const newMessageDiv = document.createElement("div");
-    newMessageDiv.className = "p-4 bg-gray-200 rounded-lg relative font-mono";
+    newMessageDiv.className = "p-4 bg-gray-200 rounded-lg relative";
     // Add close button for the parent message
     const closeButton = document.createElement("button");
     closeButton.className = "absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-sm";
@@ -950,10 +896,6 @@ function createNewMessageDiv(content, siteName, link) {
     // Add the main content of the message
     const messageTextDiv = document.createElement("div");
     messageTextDiv.className = "text-gray-800 mb-2 text-base text-content-div";
-    // const cleanedContent = content.replace(/\t/g, " ").trim();
-    // const parsedContent = marked.parse(cleanedContent);
-    // // Sanitize the parsed content
-    // const sanitizedContent = DOMPurify.sanitize(parsedContent);
     if (content) content = content.replace(/\n/g, "<br/>").trim();
     messageTextDiv.innerHTML = content;
     newMessageDiv.appendChild(messageTextDiv);
@@ -973,17 +915,22 @@ function createNewMessageDiv(content, siteName, link) {
     // Add Translate and Rewrite buttons
     const buttonContainer = document.createElement("span");
     buttonContainer.className = "ml-auto flex items-center space-x-2";
-    // const translateButton = document.createElement("button");
-    // translateButton.className = "translate-btn text-gray-600 hover:text-blue-500";
-    // translateButton.innerHTML = "<span class='text-xl'>🌐</span>";
-    // buttonContainer.appendChild(translateButton);
     const rewriteButton = document.createElement("button");
     rewriteButton.className = "rewrite-btn text-gray-600 hover:text-blue-500";
-    rewriteButton.innerHTML = "<span class='text-xl'>[Rewrite]</span>";
+    rewriteButton.innerHTML = "<span class='text-xl'><icon class='fas fa-retweet'></icon></span>";
     buttonContainer.appendChild(rewriteButton);
     resourceDiv.appendChild(buttonContainer);
     newMessageDiv.appendChild(resourceDiv);
     return newMessageDiv;
+}
+function createLoadingMessageDiv() {
+    const loadingMessageDiv = document.createElement("div");
+    loadingMessageDiv.className = "p-4 bg-gray-200 rounded-lg relative";
+    loadingMessageDiv.textContent = "Working on it...";
+    return loadingMessageDiv;
+}
+function removeLoadingMessageDiv(loadingMessageDiv) {
+    loadingMessageDiv.remove();
 }
 function populateChatSection(messages) {
     const chatSection = document.querySelector("#chat-section");

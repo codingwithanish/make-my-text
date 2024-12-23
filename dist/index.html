@@ -4,32 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Make My Text</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="./css/output-styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Abel&family=Amatic+SC:wght@400;700&family=Barlow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Caveat:wght@400..700&family=Fjalla+One&family=M+PLUS+Rounded+1c&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Playwrite+DE+Grund:wght@100..400&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
 </head>
-<body class="p-4 bg-gray-100 h-screen flex flex-col">
+<body id="main-container" class="p-4 bg-gray-100 h-screen flex flex-col">
   <!-- Header Section -->
-  <div class="bg-white shadow rounded-lg p-6 mb-10">
+  <div id="toolbar-container" class="bg-white shadow rounded-lg p-6 mb-10">
     <div class="grid grid-cols-4 gap-4" id="action-button-panel">
       <!-- Clear Memory -->
-      <button id="clearMemoryBtn" class="w-full flex flex-col items-center text-gray-600 hover:text-blue-500">
-        <span class="text-2xl">🧹</span>
+      <button id="clearMemoryBtn" class="w-full flex flex-col items-center text-white hover:text-white">
+        <span class="text-2xl"><i class="fas fa-trash-alt"></i></span>
         <span class="text-sm">Clear Memory</span>
       </button>
-      <!-- Summarize -->
-      <!-- <button id="summarizeBtn" class="w-full flex flex-col items-center text-gray-600 hover:text-blue-500">
-        <span class="text-2xl">📝</span>
-        <span class="text-sm">Summarize</span>
-      </button> -->
-      <!-- Write Email -->
-      <!-- <button id="writeEmailBtn" class="w-full flex flex-col items-center text-gray-600 hover:text-blue-500">
-        <span class="text-2xl">📧</span>
-        <span class="text-sm">Write Email</span>
-      </button> -->
     </div>
   </div>
 
   <!-- Chat Section -->
-  <div class="bg-white shadow rounded-lg flex-grow p-4 mb-4 overflow-auto">
+  <div id="chat-container" class="bg-white shadow rounded-lg flex-grow p-4 mb-4 overflow-auto">
     <div id="chat-section" class="space-y-4">
       <!-- Chat Message Appear here dynamically-->
     </div>
